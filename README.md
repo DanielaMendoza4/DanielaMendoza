@@ -21,3 +21,5 @@
 ## Alguna experiencia previa
 - Tengo experiencia en el desarrollo de proyectos académicos, como aplicaciones web con funcionalidades de navegación e integración con bases de datos relacionales.
   
+## Retos 
+- Alcanzar todos los objetivos planteados por el instructor.
