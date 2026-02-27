@@ -7,7 +7,7 @@
 - Uso de entornos virtuales(Google colab).
 - Instalación y gestión de librerías en python.
   
-## Herramientas quew utilizo
+## Herramientas que utilizo:
 - Visual Studio Code
 - Google Colab
 - MySQL
@@ -32,5 +32,3 @@
 - Alcanzar todos los objetivos planteados por el instructor.
 - Aprender los lenguajes de programación con más determinación.
 
-
-- 
