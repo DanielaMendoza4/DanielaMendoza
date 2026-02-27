@@ -7,6 +7,12 @@
 - Uso de entornos virtuales(Google colab).
 - Instalación y gestión de librerías en python.
   
+## Herramientas quew utilizo
+- Visual Studio Code
+- Google Colab
+- MySQL
+- XAMPP
+  
 ## Lenguajes de Programación:
 
 - Pyhton (Nivel básico - en formación)
@@ -25,3 +31,6 @@
 ## Retos:
 - Alcanzar todos los objetivos planteados por el instructor.
 - Aprender los lenguajes de programación con más determinación.
+
+
+- 
