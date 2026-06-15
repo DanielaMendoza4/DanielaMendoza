@@ -1,12 +1,19 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) { }
 
-  @Get()
-  async getHello() {
-    return this.appService.getHello();
+  // 🔥 generar snapshot por canal
+  @Get('generate-snapshot/:channelId')
+  generateSnapshot(@Param('channelId') channelId: string) {
+    return this.appService.generateSnapshot(channelId);
+  }
+
+  // 📊 traer snapshots
+  @Get('snapshots')
+  getSnapshots() {
+    return this.appService.findAllSnapshots();
   }
 }

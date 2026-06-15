@@ -22,4 +22,10 @@ export class Snapshot {
 
     @Column()
     snapshotDate: string;
+
+    @Column({ default: 0 })
+    likes: number;
+
+    @Column({ default: 0 })
+    comments: number;
 }

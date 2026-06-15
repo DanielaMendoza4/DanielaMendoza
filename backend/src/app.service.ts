@@ -14,165 +14,236 @@ export class AppService {
     private readonly snapshotRepository: Repository<Snapshot>,
   ) { }
 
-  async getHello() {
-    const apiKey =
-      this.configService.get<string>('YOUTUBE_API_KEY');
+  // =====================================
+  // 🔥 GENERAR SNAPSHOT
+  // =====================================
+  async generateSnapshot(channelId: string) {
+    try {
+      const apiKey =
+        this.configService.get<string>('YOUTUBE_API_KEY');
 
-    const channelId =
-      'UCSoRbSrehYFqx6n-6uyio0w';
+      if (!apiKey) {
+        throw new Error('YOUTUBE_API_KEY no configurada');
+      }
 
-    const uploadsPlaylistId =
-      'UUSoRbSrehYFqx6n-6uyio0w';
+      const uploadsPlaylistId =
+        `UU${channelId.substring(2)}`;
 
-    // =====================================
-    // 1. Obtener videos del canal
-    // =====================================
+      // =====================================
+      // 1. VIDEOS DEL CANAL
+      // =====================================
 
-    const playlistUrl =
-      `https://www.googleapis.com/youtube/v3/playlistItems` +
-      `?part=snippet` +
-      `&playlistId=${uploadsPlaylistId}` +
-      `&maxResults=10` +
-      `&key=${apiKey}`;
+      let videoIds: string[] = [];
+      let videos: any[] = [];
 
-    const playlistResponse =
-      await axios.get(playlistUrl);
+      try {
+        const playlistUrl =
+          `https://www.googleapis.com/youtube/v3/playlistItems` +
+          `?part=snippet` +
+          `&playlistId=${uploadsPlaylistId}` +
+          `&maxResults=10` +
+          `&key=${apiKey}`;
 
-    // =====================================
-    // 2. Extraer IDs de videos
-    // =====================================
+        const playlistResponse =
+          await axios.get(playlistUrl);
 
-    const videoIds =
-      playlistResponse.data.items.map(
-        (item: any) =>
-          item.snippet.resourceId.videoId,
+        videoIds =
+          playlistResponse.data.items?.map(
+            (item: any) =>
+              item.snippet?.resourceId?.videoId,
+          ).filter(Boolean) || [];
+      } catch (error) {
+        console.log(
+          'Canal sin videos o playlist no disponible',
+        );
+      }
+
+      // =====================================
+      // 2. ESTADÍSTICAS VIDEOS
+      // =====================================
+
+      if (videoIds.length > 0) {
+        const videosUrl =
+          `https://www.googleapis.com/youtube/v3/videos` +
+          `?part=statistics,snippet` +
+          `&id=${videoIds.join(',')}` +
+          `&key=${apiKey}`;
+
+        const videosResponse =
+          await axios.get(videosUrl);
+
+        videos =
+          videosResponse.data.items?.map(
+            (video: any) => ({
+              videoId: video.id,
+              title: video.snippet.title,
+              views: Number(
+                video.statistics?.viewCount ?? 0,
+              ),
+              likes: Number(
+                video.statistics?.likeCount ?? 0,
+              ),
+              comments: Number(
+                video.statistics?.commentCount ?? 0,
+              ),
+
+              publishedAt:
+                video.snippet.publishedAt,
+            }),
+          ) || [];
+      }
+
+      // =====================================
+      // 3. DATOS DEL CANAL
+      // =====================================
+
+      const channelUrl =
+        `https://www.googleapis.com/youtube/v3/channels` +
+        `?part=snippet,statistics` +
+        `&id=${channelId}` +
+        `&key=${apiKey}`;
+
+      const channelResponse =
+        await axios.get(channelUrl);
+
+      const channel =
+        channelResponse.data.items?.[0];
+
+      if (!channel) {
+        throw new Error(
+          'Canal no encontrado en YouTube',
+        );
+      }
+
+      const today =
+        new Date().toISOString().split('T')[0];
+
+      // =====================================
+      // 4. SNAPSHOT
+      // =====================================
+      const totalLikes = videos.reduce(
+        (sum, video) => sum + video.likes,
+        0,
       );
 
-    // =====================================
-    // 3. Obtener estadísticas de videos
-    // =====================================
-
-    const videosUrl =
-      `https://www.googleapis.com/youtube/v3/videos` +
-      `?part=statistics,snippet` +
-      `&id=${videoIds.join(',')}` +
-      `&key=${apiKey}`;
-
-    const videosResponse =
-      await axios.get(videosUrl);
-
-    // =====================================
-    // 4. Normalizar videos
-    // =====================================
-
-    const videos =
-      videosResponse.data.items.map(
-        (video: any) => ({
-          videoId: video.id,
-          title: video.snippet.title,
-          views: Number(
-            video.statistics.viewCount ?? 0,
-          ),
-          likes: Number(
-            video.statistics.likeCount ?? 0,
-          ),
-          comments: Number(
-            video.statistics.commentCount ?? 0,
-          ),
-          publishedAt:
-            video.snippet.publishedAt,
-        }),
+      const totalComments = videos.reduce(
+        (sum, video) => sum + video.comments,
+        0,
       );
 
-    // =====================================
-    // 5. Obtener estadísticas del canal
-    // =====================================
+      console.log('TOTAL LIKES:', totalLikes);
+      console.log('TOTAL COMMENTS:', totalComments);
+      console.log('VIDEOS:', videos.length);
 
-    const channelUrl =
-      `https://www.googleapis.com/youtube/v3/channels` +
-      `?part=snippet,statistics` +
-      `&id=${channelId}` +
-      `&key=${apiKey}`;
 
-    const channelResponse =
-      await axios.get(channelUrl);
+      const channelSnapshot = {
 
-    const channel =
-      channelResponse.data.items[0];
 
-    // =====================================
-    // 6. Fecha de hoy
-    // =====================================
+        channelId,
 
-    const today =
-      new Date().toISOString().split('T')[0];
+        channelTitle:
+          channel.snippet.title,
 
-    // =====================================
-    // 7. Normalizar channelSnapshot
-    // =====================================
+        subscribers: Number(
+          channel.statistics?.subscriberCount ?? 0,
+        ),
 
-    const channelSnapshot = {
-      channelId,
+        totalViews: Number(
+          channel.statistics?.viewCount ?? 0,
+        ),
 
-      channelTitle:
-        channel.snippet.title,
+        videoCount: Number(
+          channel.statistics?.videoCount ?? 0,
+        ),
 
-      subscribers: Number(
-        channel.statistics
-          .subscriberCount ?? 0,
-      ),
+        likes: totalLikes,
 
-      totalViews: Number(
-        channel.statistics.viewCount ??
-        0,
-      ),
+        comments: totalComments,
 
-      videoCount: Number(
-        channel.statistics.videoCount ??
-        0,
-      ),
+        snapshotDate: today,
+      };
+      console.log('SNAPSHOT:', channelSnapshot);
 
-      snapshotDate: today,
-    };
+      // =====================================
+      // 5. ACTUALIZAR O CREAR
+      // =====================================
 
-    // =====================================
-    // 8. Verificar si ya existe snapshot
-    // =====================================
+      const existingSnapshot =
+        await this.snapshotRepository.findOne({
+          where: {
+            channelId,
+            snapshotDate: today,
+          },
+        });
 
-    const existingSnapshot =
-      await this.snapshotRepository.findOne({
-        where: {
-          channelId,
-          snapshotDate: today,
-        },
-      });
+      if (existingSnapshot) {
+        existingSnapshot.channelTitle =
+          channelSnapshot.channelTitle;
 
-    // =====================================
-    // 9. Guardar snapshot si no existe
-    // =====================================
+        existingSnapshot.subscribers =
+          channelSnapshot.subscribers;
 
-    if (!existingSnapshot) {
-      const snapshot =
-        this.snapshotRepository.create(
-          channelSnapshot,
+        existingSnapshot.totalViews =
+          channelSnapshot.totalViews;
+
+        existingSnapshot.videoCount =
+          channelSnapshot.videoCount;
+
+        existingSnapshot.likes =
+          channelSnapshot.likes;
+
+        existingSnapshot.comments =
+          channelSnapshot.comments;
+
+        await this.snapshotRepository.save(
+          existingSnapshot,
         );
 
-      await this.snapshotRepository.save(
-        snapshot,
+        console.log(
+          'Snapshot actualizado correctamente',
+        );
+      } else {
+        const snapshotEntity =
+          this.snapshotRepository.create(
+            channelSnapshot,
+          );
+
+        await this.snapshotRepository.save(
+          snapshotEntity,
+        );
+
+        console.log(
+          'Snapshot creado correctamente',
+        );
+      }
+
+      return {
+        message:
+          'Snapshot procesado correctamente',
+
+        channelSnapshot,
+
+        videos,
+      };
+    } catch (error: any) {
+      console.error(
+        'ERROR REAL:',
+        error?.response?.data || error.message,
       );
+
+      throw error;
     }
+  }
 
-    // =====================================
-    // 10. Respuesta final
-    // =====================================
+  // =====================================
+  // 📊 LISTAR SNAPSHOTS
+  // =====================================
 
-    return {
-      message:
-        'Snapshot guardado correctamente',
-
-      channelSnapshot,
-
-      videos,
-    };
+  async findAllSnapshots() {
+    return this.snapshotRepository.find({
+      order: {
+        snapshotDate: 'DESC',
+      },
+    });
   }
 }
